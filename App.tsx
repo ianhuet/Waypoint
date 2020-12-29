@@ -3,6 +3,7 @@ import { Button, Image, ImageBackground, StyleSheet, Text, View } from 'react-na
 
 import * as Location from 'expo-location'
 import * as Permissions from 'expo-permissions'
+import { calcBearing, calcDistance, convertDecimalToDMS, } from './calculations'
 
 interface ILocation {
   altitude: number;
@@ -57,6 +58,7 @@ const styles = StyleSheet.create({
     fontFamily: 'AvenirNext-Regular',
     fontSize: 18,
     fontWeight: 'normal',
+    lineHeight: 20,
     margin: 5,
   },
 
@@ -147,60 +149,6 @@ export default function App() {
     watchPosition()
   }, [permissionGranted])
 
-  const toRadians = (degrees: number) => degrees * Math.PI / 180
-  const toDegrees = (radians: number) => radians * 180 / Math.PI
-  const calcBearing = (startLat: number, startLng: number, destLat: number, destLng: number) => {
-    startLat = toRadians(startLat);
-    startLng = toRadians(startLng);
-    destLat = toRadians(destLat);
-    destLng = toRadians(destLng);
-
-    const y: number = Math.sin(destLng - startLng) * Math.cos(destLat)
-    const x: number = Math.cos(startLat) * Math.sin(destLat) -
-          Math.sin(startLat) * Math.cos(destLat) * Math.cos(destLng - startLng)
-    let bearing: number = Math.atan2(y, x)
-    bearing = toDegrees(bearing)
-    return (bearing + 360) % 360
-  }
-  const calcDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    if ((lat1 == lat2) && (lon1 == lon2)) {
-      return 0
-    }
-
-    const radLat1 = Math.PI * lat1/180
-    const radLat2 = Math.PI * lat2/180
-    const theta = lon1 - lon2
-    const radTheta = Math.PI * theta/180
-    let dist = Math.sin(radLat1) * Math.sin(radLat2) + Math.cos(radLat1) * Math.cos(radLat2) * Math.cos(radTheta)
-
-    if (dist > 1) {
-      dist = 1
-    }
-    dist = Math.acos(dist)
-    dist = dist * 180/Math.PI
-    dist = dist * 60 * 1.1515
-    dist = dist * 1.609344
-    return dist
-  }
-  const toDegreesMinutesAndSeconds = (coordinate: number) => {
-    const absolute = Math.abs(coordinate);
-    const degrees = Math.floor(absolute);
-    const minutesNotTruncated = (absolute - degrees) * 60;
-    const minutes = Math.floor(minutesNotTruncated);
-    const seconds = Math.floor((minutesNotTruncated - minutes) * 60);
-
-    return `${degrees}\u00B0 ${minutes}' ${seconds}"`;
-  }
-  const convertDMS = (lat: number, lng: number) => {
-    const latitude = toDegreesMinutesAndSeconds(lat);
-    const latitudeCardinal = lat >= 0 ? "N" : "S";
-
-    const longitude = toDegreesMinutesAndSeconds(lng);
-    const longitudeCardinal = lng >= 0 ? "E" : "W";
-
-    return `${latitude} ${latitudeCardinal} ${longitude} ${longitudeCardinal}`;
-  }
-
   const getDirectionLabel = () => {
     const points = [
       'North','NNE','NE','ENE',
@@ -225,7 +173,8 @@ export default function App() {
           location.latitude,
           location.longitude,
           waypoint.latitude,
-          waypoint.longitude
+          waypoint.longitude,
+          heading,
         )
       : -28
 
@@ -235,9 +184,7 @@ export default function App() {
     })
   }
 
-  const getDistance = () => {
-    const distance = calcDistance(location.latitude, location.longitude, waypoint.latitude, waypoint.longitude, 'K')
-
+  const formatDistance = (distance: number) => {
     let distanceString = ''
     if (distance < 1) {
       distanceString = `${Math.round(distance * 1000)}m`
@@ -262,6 +209,8 @@ export default function App() {
       })
     }
   }
+  const distanceToWayPoint: number = calcDistance(location.latitude, location.longitude, waypoint.latitude, waypoint.longitude)
+  const atWayPointRange: number = 3
 
   return (
     <View style={styles.container}>
@@ -274,11 +223,18 @@ export default function App() {
 
         {activeWaypoint &&
           <View style={styles.waypoint}>
-            <Text style={styles.heading4}>{convertDMS(waypoint.latitude, waypoint.longitude)}</Text>
-            <View style={styles.waypoint}>
-              <Text style={styles.heading4}>Distance: {getDistance()}</Text>
-              <Text style={styles.heading4}>Elevation: {waypoint.altitude.toFixed(0)}m</Text>
-            </View>
+            {distanceToWayPoint > atWayPointRange &&
+              <>
+                <Text style={styles.heading4}>{convertDecimalToDMS(waypoint.latitude, waypoint.longitude)}</Text>
+                <View style={styles.waypoint}>
+                  <Text style={styles.heading4}>Distance: {formatDistance(distanceToWayPoint)}</Text>
+                  <Text style={styles.heading4}>Elevation: {waypoint.altitude.toFixed(0)}m</Text>
+                </View>
+              </>
+            }
+            {distanceToWayPoint <= atWayPointRange &&
+              <Text style={styles.heading2}>At Waypoint</Text>
+            }
           </View>
         }
       </View>
@@ -297,12 +253,11 @@ export default function App() {
           {heading}&deg; {getDirectionLabel()}
         </Text>
       }
-
       {(activeWaypoint && wayPointer) &&
         <Text style={styles.heading2}>Way Pointer Engaged</Text>
       }
 
-      <Text style={styles.heading3}>{convertDMS(location.latitude, location.longitude)}</Text>
+      <Text style={styles.heading3}>{convertDecimalToDMS(location.latitude, location.longitude)}</Text>
       <Text style={styles.heading3}>{location.altitude.toFixed(0)}m elevation</Text>
 
       {activeWaypoint &&
