@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "rn-locator",
-    "slug": "rn-locator",
+    "name": "Waypoint",
+    "slug": "Waypoint",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,7 +17,8 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ianhuet.Waypoint"
     },
     "android": {
       "adaptiveIcon": {

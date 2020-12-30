@@ -3,7 +3,7 @@ import { Button, Image, ImageBackground, StyleSheet, Text, View } from 'react-na
 
 import * as Location from 'expo-location'
 import * as Permissions from 'expo-permissions'
-import { calcBearing, calcDistance, convertDecimalToDMS, } from './calculations'
+import { calcBearing, calcDistanceInMeters, convertDecimalToDMS, } from './calculations'
 
 interface ILocation {
   altitude: number;
@@ -66,23 +66,33 @@ const styles = StyleSheet.create({
     height: 350,
     width: 350,
     marginBottom: 32,
+    display: 'flex',
+    justifyContent: 'center',
+    flexDirection: 'row',
+  },
+  north: {
+    color: '#777',
+    fontSize: 52,
+    left: '48.25%',
+    position: 'absolute',
+    top: -30,
   },
   dial: {
     height: 350,
     left: 0,
     position: 'absolute',
-    top: 0,
+    top: 15,
     width: 350,
   },
   pointer: {
     height: 150,
-    left: '28.5%',
-    opacity: 0.5,
+    left: '29%',
+    opacity: 0.85,
     position: 'absolute',
-    top: '28.5%',
-    transform: [{ rotate: '-28deg'}],
+    top: '32.5%',
+    transform: [{ rotate: '-28deg' }],
     width: 150,
-    zIndex: -1,
+    zIndex: 10,
   },
 
   bottomButton: {
@@ -100,14 +110,12 @@ const styles = StyleSheet.create({
 export default function App() {
   const [permissionGranted, setPermissionGranted] = useState<boolean>(false)
   const [errorMessage, setErrorMessage] = useState<string>('')
-
   const [heading, setHeading] = useState<number>(0)
   const [location, setLocation] = useState<ILocation>({
     altitude: 0,
     latitude: 0,
     longitude: 0,
   })
-
   const [waypoint, setWayPoint] = useState<ILocation>({
     altitude: 0,
     latitude: 0,
@@ -160,43 +168,48 @@ export default function App() {
     return points[Math.round(heading / 22.5)]
   }
   const rotation = heading >= 45 ? heading : heading + 360
-  const dialRotateStyle = () => {
-    const pointer: number = wayPointer ? 0 : rotation
-
-    return ({
-      transform: [{ rotate: `${pointer}deg`}],
-    })
+  const dialRotateStyle = {
+    transform: [{ rotate: `${rotation}deg`}],
   }
   const pointerRotateStyle = () => {
-    const pointer: number = wayPointer
-      ? calcBearing(
-          location.latitude,
-          location.longitude,
-          waypoint.latitude,
-          waypoint.longitude,
-          heading,
-        )
-      : -28
+    let pointer: number = 0
+
+    if (wayPointer) {
+      const range = calcBearing(
+        location.latitude,
+        location.longitude,
+        waypoint.latitude,
+        waypoint.longitude,
+      ) - heading - 28.25
+
+      pointer = range
+    } else {
+      pointer = -28.25
+    }
 
     return ({
       transform: [{ rotate: `${pointer}deg`}],
-      zIndex: 10,
     })
   }
 
   const formatDistance = (distance: number) => {
     let distanceString = ''
-    if (distance < 1) {
-      distanceString = `${Math.round(distance * 1000)}m`
+    if (distance < 1000) {
+      distanceString = `${Math.round(distance)}m`
     } else {
-      distanceString = `${distance.toFixed(2)}km`
+      const distanceKm = distance / 1000
+      distanceString = `${distanceKm.toFixed(2)}km`
     }
-
     return distanceString
   }
   const activeWaypoint = waypoint.latitude !== 0 || waypoint.longitude !== 0
   const waypointButtonLabel = activeWaypoint ? 'Clear Waypoint' : 'Set Waypoint'
   const waypointButtonColour = activeWaypoint ? '#11AB11' : '#666'
+
+  const distanceToWayPoint: number = calcDistanceInMeters(location.latitude, location.longitude, waypoint.latitude, waypoint.longitude)
+  const waypointRangeMeters: number = 3
+  const bearingButtonColour = wayPointer ? '#11AB11' : '#666'
+
   const toggleWaypoint = () => {
     if (activeWaypoint) {
       setWayPoint({ altitude: 0, latitude: 0, longitude: 0 })
@@ -205,12 +218,12 @@ export default function App() {
       setWayPoint({
         altitude: location.altitude,
         latitude: location.latitude,
-        longitude: location.longitude
+        longitude: location.longitude,
       })
     }
   }
-  const distanceToWayPoint: number = calcDistance(location.latitude, location.longitude, waypoint.latitude, waypoint.longitude)
-  const atWayPointRange: number = 3
+
+  const bearing = calcBearing(location.latitude, location.longitude, waypoint.latitude, waypoint.longitude) - 28
 
   return (
     <View style={styles.container}>
@@ -223,25 +236,23 @@ export default function App() {
 
         {activeWaypoint &&
           <View style={styles.waypoint}>
-            {distanceToWayPoint > atWayPointRange &&
-              <>
-                <Text style={styles.heading4}>{convertDecimalToDMS(waypoint.latitude, waypoint.longitude)}</Text>
-                <View style={styles.waypoint}>
-                  <Text style={styles.heading4}>Distance: {formatDistance(distanceToWayPoint)}</Text>
-                  <Text style={styles.heading4}>Elevation: {waypoint.altitude.toFixed(0)}m</Text>
-                </View>
-              </>
-            }
-            {distanceToWayPoint <= atWayPointRange &&
-              <Text style={styles.heading2}>At Waypoint</Text>
-            }
+            <Text style={styles.heading4}>{convertDecimalToDMS(waypoint.latitude, waypoint.longitude)}</Text>
+
+            <View style={styles.waypoint}>
+              <Text style={styles.heading4}>Distance: {formatDistance(distanceToWayPoint)}</Text>
+              <Text style={styles.heading4}>Elevation: {waypoint.altitude.toFixed(0)}m</Text>
+            </View>
           </View>
         }
       </View>
 
       <View style={styles.compass}>
-        <Image source={require('./assets/dial.png')} style={[styles.dial, dialRotateStyle()]} />
-        <ImageBackground source={require('./assets/compass.png')} style={[styles.pointer, pointerRotateStyle()]} />
+        <Text style={styles.north}>{'\u00B7'}</Text>
+        <ImageBackground source={require('./assets/dial.png')} style={[styles.dial, dialRotateStyle]} />
+
+        {/* <ImageBackground source={require('./assets/dial.png')} style={styles.dial} /> */}
+
+        <Image source={require('./assets/compass.png')} style={[styles.pointer, pointerRotateStyle()]} />
       </View>
 
       {errorMessage.length > 0 &&
@@ -264,8 +275,9 @@ export default function App() {
         <View style={styles.bottomButton}>
           <Button
             title='Waypointer Bearing'
-            color='#11AB11'
+            color={bearingButtonColour}
             onPress={() => setWayPointer(!wayPointer)}
+            disabled={distanceToWayPoint <= waypointRangeMeters}
           />
         </View>
       }

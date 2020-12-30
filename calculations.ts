@@ -11,7 +11,7 @@ const toDegreesMinutesAndSeconds = (coordinate: number) => {
   return `${degrees}\u00B0 ${minutes}' ${seconds}"`;
 }
 
-export const calcBearing = (startLat: number, startLng: number, destLat: number, destLng: number, heading: number) => {
+export const calcBearing = (startLat: number, startLng: number, destLat: number, destLng: number) => {
   startLat = toRadians(startLat);
   startLng = toRadians(startLng);
   destLat = toRadians(destLat);
@@ -19,12 +19,12 @@ export const calcBearing = (startLat: number, startLng: number, destLat: number,
 
   const y: number = Math.sin(destLng - startLng) * Math.cos(destLat)
   const x: number = Math.cos(startLat) * Math.sin(destLat) -
-        Math.sin(startLat) * Math.cos(destLat) * Math.cos(destLng - startLng)
+    Math.sin(startLat) * Math.cos(destLat) * Math.cos(destLng - startLng)
   let bearing: number = Math.atan2(y, x)
   bearing = toDegrees(bearing)
-  return (bearing + 360) % 360 + heading
+  return (bearing + 360) % 360
 }
-export const calcDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+export const calcDistanceInMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   if ((lat1 == lat2) && (lon1 == lon2)) {
     return 0
   }
@@ -42,6 +42,7 @@ export const calcDistance = (lat1: number, lon1: number, lat2: number, lon2: num
   dist = dist * 180/Math.PI
   dist = dist * 60 * 1.1515
   dist = dist * 1.609344
+  dist = dist * 1000
   return dist
 }
 export const convertDecimalToDMS = (lat: number, lng: number) => {
