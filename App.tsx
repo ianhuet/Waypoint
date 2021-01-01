@@ -249,9 +249,6 @@ export default function App() {
       <View style={styles.compass}>
         <Text style={styles.north}>{'\u00B7'}</Text>
         <ImageBackground source={require('./assets/dial.png')} style={[styles.dial, dialRotateStyle]} />
-
-        {/* <ImageBackground source={require('./assets/dial.png')} style={styles.dial} /> */}
-
         <Image source={require('./assets/compass.png')} style={[styles.pointer, pointerRotateStyle()]} />
       </View>
 

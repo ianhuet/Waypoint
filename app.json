@@ -3,6 +3,7 @@
     "name": "Waypoint",
     "slug": "Waypoint",
     "version": "1.0.0",
+    "description": "Use Waypoint to set a marker and follow the compass back to that point. An enhacement on the standard iOS compass app.",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
